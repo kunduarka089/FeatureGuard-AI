@@ -50,7 +50,9 @@ def event_summary():
         rows = db.execute("""
             SELECT feature_name, COUNT(*) AS events,
                    SUM(success) AS successes,
-                   ROUND(AVG(value), 3) AS average_value
+                   COUNT(*) - SUM(success) AS failures,
+                   ROUND(AVG(value), 3) AS average_value,
+                   ROUND(1.0 * (COUNT(*) - SUM(success)) / COUNT(*), 3) AS failure_rate
             FROM events GROUP BY feature_name ORDER BY events DESC
         """).fetchall()
     return [dict(row) for row in rows]
