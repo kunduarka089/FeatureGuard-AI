@@ -14,7 +14,7 @@ async function loadData(){
 async function sendEvent(){
  const payload={event_name:document.getElementById('eventName').value,feature_name:document.getElementById('featureName').value,success:document.getElementById('eventSuccess').value==='true',value:1};
  const res=await fetch('/api/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
- const data=await res.json();document.getElementById('eventMessage').textContent=res.ok?'Event recorded. ID: '+data.event_id:'Error: '+data.error;loadData();
+ const data=await res.json();document.getElementById('eventMessage').textContent=res.ok?'Event recorded. ID: '+data.event_id:'Error: '+data.error;loadData();scanAnomalies();
 }
 async function analyse(){
  const target=document.getElementById('analysis');target.textContent='Analysing recorded events…';
