@@ -131,6 +131,21 @@ def list_feature_states():
     return flags
 
 
+def _typed_feature_state_value(value):
+    """Convert the scalar returned by the environment API to the typed v2 format."""
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, bool):
+        return {"type": "bool", "boolean_value": value}
+    if isinstance(value, int):
+        return {"type": "int", "integer_value": value}
+    if isinstance(value, str):
+        return {"type": "unicode", "string_value": value}
+    raise FlagsmithError(
+        f"Cannot safely preserve unsupported Flagsmith feature value type: {type(value).__name__}."
+    )
+
+
 def set_feature_enabled(feature_name, enabled):
     """Change one environment-default flag using Flagsmith v2 feature versioning.
 
@@ -182,7 +197,7 @@ def set_feature_enabled(feature_name, enabled):
             "description": f"FeatureGuard AI rollback: {feature_name} set to {'ON' if enabled else 'OFF'}",
             "feature_states_to_update": [{
                 "enabled": bool(enabled),
-                "feature_state_value": target["value"],
+                "feature_state_value": _typed_feature_state_value(target["value"]),
                 "multivariate_feature_state_values": (
                     target["multivariate_feature_state_values"] or []
                 ),
