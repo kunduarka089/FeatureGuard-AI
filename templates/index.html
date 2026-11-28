@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FeatureGuard AI</title><link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header><div class="brand">◈ FeatureGuard <span>AI</span></div><div class="status"><i></i> Monitoring workspace</div></header>
+<main>
+  <section class="hero"><p class="eyebrow">AI PRODUCT INTELLIGENCE & INCIDENT RECOVERY</p>
+    <h1>Understand your users.<br><em>Protect your application.</em></h1>
+    <p class="sub">A control centre for feature performance, application events and safer feature-flag decisions.</p>
+  </section>
+  <section class="metrics">
+    <article><small>EVENTS COLLECTED</small><strong id="eventCount">—</strong><span>Recorded in this workspace</span></article>
+    <article><small>FEATURES OBSERVED</small><strong id="featureCount">—</strong><span>Distinct feature names</span></article>
+    <article><small>SUCCESS RATE</small><strong id="successRate">—</strong><span>Across recorded events</span></article>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><div><p class="eyebrow">FEATUREMIND</p><h2>Feature performance</h2></div><button onclick="loadData()">Refresh data</button></div>
+    <div id="featureTable" class="empty">No events yet. Send a test event to begin.</div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><div><p class="eyebrow">AI ANALYSIS</p><h2>Ask FeatureMind to analyse</h2></div><button class="primary" onclick="analyse()">Analyse events</button></div>
+    <pre id="analysis">AI analysis will appear here.</pre>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><div><p class="eyebrow">EVENT COLLECTOR</p><h2>Send a test event</h2></div></div>
+    <div class="event-form"><input id="eventName" value="checkout_completed" aria-label="Event name"><input id="featureName" value="new_checkout" aria-label="Feature name"><select id="eventSuccess"><option value="true">Successful</option><option value="false">Failed</option></select><button onclick="sendEvent()">Send event</button></div>
+    <p id="eventMessage" class="hint">This creates a sample event in the local database.</p>
+  </section>
+</main>
+<footer>FeatureGuard AI · Hackathon MVP</footer>
+<script src="/static/app.js"></script>
+</body></html>
