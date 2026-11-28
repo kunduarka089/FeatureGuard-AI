@@ -7,7 +7,7 @@ AI-powered feature intelligence and safer incident recovery using Groq and Flags
 - Flask dashboard with mobile-friendly event collection and feature performance summaries.
 - Groq-powered FeatureMind analysis using an OpenAI-compatible API endpoint.
 - Server-side Flagsmith Management API integration to read feature states.
-- RollbackAI preview for the allowlisted `new_checkout` flag.
+- Rule-based incident monitor that checks feature failure rates every 30 seconds (minimum 3 events by default; 50% failure threshold).
 - Explicit, one-time approval required before switching the flag OFF.
 - After an approved update, the app reads Flagsmith again to verify the flag is OFF.
 - Basic backend and rollback workflow tests.
@@ -67,6 +67,7 @@ Preparing a rollback does not change a flag. Approval tokens are short-lived (5 
 - `POST /api/events`
 - `GET /api/events`
 - `GET /api/summary`
+- `GET /api/monitor/anomalies`
 - `POST /api/ai/analyse`
 - `GET /api/flagsmith/flags`
 - `POST /api/rollback/request`
@@ -78,7 +79,7 @@ Run `pytest -q`.
 
 ## Important MVP limitations
 
-- Anomaly detection and automated incident correlation are not yet implemented; the current rollback preview is manually initiated.
+- The MVP monitor uses a simple configurable failure-rate threshold; it is not statistical anomaly detection and does not prove that a flag caused a problem. It never triggers a rollback automatically.
 - Only `new_checkout` is allowlisted by default.
 - Pending approvals are held in memory and disappear on restart.
 - The current SQLite database is on the host's local filesystem; on ephemeral hosting it is not durable.
