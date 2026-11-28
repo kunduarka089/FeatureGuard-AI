@@ -23,3 +23,55 @@ async function analyse(){
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 loadData();
+
+
+let pendingApprovalId = null;
+
+async function loadFlags(){
+ const target=document.getElementById('flagList');
+ target.textContent='Loading Flagsmith flags…';
+ try{
+  const res=await fetch('/api/flagsmith/flags');
+  const data=await res.json();
+  if(!res.ok || !data.configured) throw new Error(data.error||'Flagsmith is not configured.');
+  if(!data.flags.length){target.textContent='No feature states were returned for this environment.';return}
+  target.innerHTML='<table><thead><tr><th>Flag</th><th>State</th><th>Action</th></tr></thead><tbody>'+
+   data.flags.map(f=>'<tr><td>'+escapeHtml(f.name)+'</td><td>'+(f.enabled?'ON':'OFF')+'</td><td>'+
+   (f.enabled && f.name==='new_checkout'?'<button onclick="requestRollback(\''+escapeHtml(f.name)+'\')">Prepare rollback</button>':'—')+
+   '</td></tr>').join('')+'</tbody></table>';
+ }catch(err){target.textContent='Flagsmith unavailable: '+err.message}
+}
+
+async function requestRollback(featureName){
+ const status=document.getElementById('rollbackStatus');
+ const area=document.getElementById('approvalArea');
+ status.textContent='Preparing rollback…';area.innerHTML='';pendingApprovalId=null;
+ try{
+  const res=await fetch('/api/rollback/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({feature_name:featureName,reason:'Demo incident: checkout failures increased after the new checkout flag was enabled.'})});
+  const data=await res.json();
+  if(!res.ok) throw new Error(data.error||'Could not prepare rollback.');
+  pendingApprovalId=data.approval_id;
+  status.textContent='Review: '+data.feature_name+' will be switched OFF. Reason: '+data.reason+' Nothing has changed yet.';
+  area.innerHTML='<button class="primary" onclick="approveRollback()">Approve and switch OFF</button> <button onclick="cancelRollback()">Cancel</button>';
+ }catch(err){status.textContent='Rollback request failed: '+err.message}
+}
+
+async function approveRollback(){
+ if(!pendingApprovalId)return;
+ const status=document.getElementById('rollbackStatus');
+ const area=document.getElementById('approvalArea');
+ status.textContent='Applying approved rollback and verifying Flagsmith…';
+ const id=pendingApprovalId;pendingApprovalId=null;area.innerHTML='';
+ try{
+  const res=await fetch('/api/rollback/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({approval_id:id})});
+  const data=await res.json();
+  if(!res.ok) throw new Error(data.error||'Rollback failed.');
+  status.textContent=data.message;loadFlags();
+ }catch(err){status.textContent='Rollback failed: '+err.message}
+}
+function cancelRollback(){
+ pendingApprovalId=null;
+ document.getElementById('approvalArea').innerHTML='';
+ document.getElementById('rollbackStatus').textContent='Rollback cancelled. No flag was changed.';
+}
+loadFlags();
