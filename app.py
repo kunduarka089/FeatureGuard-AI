@@ -70,6 +70,49 @@ def ai_analyse():
     return jsonify(analyse_events(event_summary()))
 
 
+@app.get("/api/monitor/anomalies")
+def monitor_anomalies():
+    """Conservative rule-based detector; never changes feature flags."""
+    min_events = max(3, int(os.getenv("ANOMALY_MIN_EVENTS", "3")))
+    failure_threshold = min(1.0, max(0.0, float(os.getenv("ANOMALY_FAILURE_RATE", "0.5"))))
+    features = event_summary()
+    alerts = []
+    insufficient = []
+    for item in features:
+        count = int(item["events"])
+        rate = float(item["failure_rate"] or 0)
+        record = {
+            "feature_name": item["feature_name"],
+            "events": count,
+            "failures": int(item["failures"] or 0),
+            "failure_rate": rate,
+        }
+        if count < min_events:
+            insufficient.append(record)
+        elif rate >= failure_threshold:
+            alerts.append({
+                **record,
+                "severity": "high" if rate >= 0.8 else "warning",
+                "message": (
+                    f"{record['failures']} of {count} events failed "
+                    f"({round(rate * 100)}%). Investigate this feature."
+                ),
+            })
+    return jsonify({
+        "status": "alert" if alerts else ("insufficient_data" if insufficient else "healthy"),
+        "thresholds": {"minimum_events": min_events, "failure_rate": failure_threshold},
+        "alerts": alerts,
+        "insufficient_data": insufficient,
+        "message": (
+            "Potential feature issue detected. This is a signal to investigate, not proof of cause."
+            if alerts else
+            "Not enough events yet to assess every feature reliably."
+            if insufficient else
+            "No feature crossed the configured failure threshold."
+        ),
+    })
+
+
 @app.get("/api/flagsmith/flags")
 def flagsmith_flags():
     try:
