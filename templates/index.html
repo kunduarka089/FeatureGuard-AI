@@ -20,6 +20,11 @@
     <div class="panel-head"><div><p class="eyebrow">FEATUREMIND</p><h2>Feature performance</h2></div><button onclick="loadData()">Refresh data</button></div>
     <div id="featureTable" class="empty">No events yet. Send a test event to begin.</div>
   </section>
+  <section class="panel" id="monitorPanel">
+    <div class="panel-head"><div><p class="eyebrow">AUTOMATED MONITOR</p><h2>Incident detection</h2></div><button onclick="scanAnomalies()">Scan now</button></div>
+    <p class="hint">Checks feature failure rates every 30 seconds. Alerts are investigative signals, not proof of causation. No flag is changed automatically.</p>
+    <div id="anomalyResults" class="empty">Checking event data…</div>
+  </section>
   <section class="panel">
     <div class="panel-head"><div><p class="eyebrow">AI ANALYSIS</p><h2>Ask FeatureMind to analyse</h2></div><button class="primary" onclick="analyse()">Analyse events</button></div>
     <pre id="analysis">AI analysis will appear here.</pre>
