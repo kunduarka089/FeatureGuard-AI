@@ -153,6 +153,9 @@ def set_feature_enabled(feature_name, enabled):
         raise FlagsmithError(
             f"Environment-default state for feature flag '{feature_name}' was not found."
         )
+    if target["enabled"] is bool(enabled):
+        requested = "ON" if enabled else "OFF"
+        raise FlagsmithError(f"Feature flag '{feature_name}' is already {requested}; no new version was created.")
     if target["value"] is None:
         raise FlagsmithError(
             f"Cannot safely update '{feature_name}': Flagsmith did not return its current value."
