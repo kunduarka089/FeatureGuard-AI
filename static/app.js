@@ -37,7 +37,7 @@ async function loadFlags(){
   if(!data.flags.length){target.textContent='No feature states were returned for this environment.';return}
   target.innerHTML='<table><thead><tr><th>Flag</th><th>State</th><th>Action</th></tr></thead><tbody>'+
    data.flags.map(f=>'<tr><td>'+escapeHtml(f.name)+'</td><td>'+(f.enabled?'ON':'OFF')+'</td><td>'+
-   (f.enabled && f.name==='new_checkout'?'<button onclick="requestRollback(\''+escapeHtml(f.name)+'\')">Prepare rollback</button>':'—')+
+   (f.enabled && f.name==='new_checkout'?'<button onclick="requestRollback(\'new_checkout\')">Prepare rollback</button>':'—')+
    '</td></tr>').join('')+'</tbody></table>';
  }catch(err){target.textContent='Flagsmith unavailable: '+err.message}
 }
