@@ -23,6 +23,31 @@ async function analyse(){
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 loadData();
+scanAnomalies();
+setInterval(scanAnomalies, 30000);
+
+
+async function scanAnomalies(){
+ const target=document.getElementById('anomalyResults');
+ if(!target)return;
+ try{
+  const res=await fetch('/api/monitor/anomalies');
+  const data=await res.json();
+  if(!res.ok)throw new Error(data.error||'Monitor request failed.');
+  if(data.alerts.length){
+   target.innerHTML='<div class="alert-list">'+data.alerts.map(a=>
+    '<article class="alert-item"><strong>'+escapeHtml(a.feature_name)+'</strong> <span class="status-pill">'+escapeHtml(a.severity.toUpperCase())+'</span><p>'+
+    escapeHtml(a.message)+'</p><small>'+a.events+' events checked · '+Math.round(a.failure_rate*100)+'% failure rate</small></article>'
+   ).join('')+'</div><p class="hint">'+escapeHtml(data.message)+'</p>';
+  }else if(data.insufficient_data.length){
+   target.innerHTML='<p>'+escapeHtml(data.message)+'</p><ul>'+data.insufficient_data.map(f=>
+    '<li><strong>'+escapeHtml(f.feature_name)+'</strong>: '+f.events+' / '+data.thresholds.minimum_events+' minimum events</li>'
+   ).join('')+'</ul>';
+  }else{
+   target.textContent=data.message;
+  }
+ }catch(err){target.textContent='Monitor unavailable: '+err.message}
+}
 
 
 let pendingApprovalId = null;
