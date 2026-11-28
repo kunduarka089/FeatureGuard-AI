@@ -12,3 +12,6 @@ button{border:1px solid #4b5276;background:#202b45;color:var(--text);padding:10p
 table{width:100%;border-collapse:collapse;margin-top:10px}td,th{text-align:left;padding:11px 8px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:11px}
 footer{text-align:center;color:var(--muted);padding:30px;font-size:12px}
 @media(max-width:650px){.metrics{grid-template-columns:1fr}.metrics article{padding:15px}.panel-head{align-items:flex-start;flex-direction:column}.event-form{flex-direction:column}.event-form input,.event-form select{width:100%}header{padding:0 16px}}
+
+#approvalArea{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+#flagList table{margin-top:8px}
