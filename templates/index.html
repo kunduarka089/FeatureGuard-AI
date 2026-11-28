@@ -24,6 +24,13 @@
     <div class="panel-head"><div><p class="eyebrow">AI ANALYSIS</p><h2>Ask FeatureMind to analyse</h2></div><button class="primary" onclick="analyse()">Analyse events</button></div>
     <pre id="analysis">AI analysis will appear here.</pre>
   </section>
+  <section class="panel" id="rollbackPanel">
+    <div class="panel-head"><div><p class="eyebrow">ROLLBACKAI</p><h2>Feature-flag safety</h2></div><button onclick="loadFlags()">Refresh flags</button></div>
+    <p class="hint">Flags are read from your configured Flagsmith environment. Only allowlisted flags can be rolled back, and no change happens without your approval.</p>
+    <div id="flagList" class="empty">Loading Flagsmith flags…</div>
+    <div id="rollbackStatus" class="hint" aria-live="polite"></div>
+    <div id="approvalArea"></div>
+  </section>
   <section class="panel">
     <div class="panel-head"><div><p class="eyebrow">EVENT COLLECTOR</p><h2>Send a test event</h2></div></div>
     <div class="event-form"><input id="eventName" value="checkout_completed" aria-label="Event name"><input id="featureName" value="new_checkout" aria-label="Feature name"><select id="eventSuccess"><option value="true">Successful</option><option value="false">Failed</option></select><button onclick="sendEvent()">Send event</button></div>
