@@ -1,48 +1,141 @@
 import os
+import secrets
+import time
 from flask import Flask, request, jsonify, render_template
 from dotenv import load_dotenv
 from featureguard.database import init_db, save_event, recent_events, event_summary
 from featureguard.ai import analyse_events
+from featureguard.flagsmith_client import (
+    FlagsmithError, list_feature_states, set_feature_enabled
+)
 
 load_dotenv()
 app = Flask(__name__)
 init_db()
 
+# Short-lived, one-time approvals. A restart safely invalidates pending approvals.
+_pending_rollbacks = {}
+APPROVAL_TTL_SECONDS = 300
+
+
+def _allowed_rollback_flags():
+    raw = os.getenv("ROLLBACK_ALLOWED_FLAGS", "new_checkout")
+    return {name.strip() for name in raw.split(",") if name.strip()}
+
+
 @app.get("/")
 def index():
     return render_template("index.html")
+
 
 @app.get("/api/health")
 def health():
     return jsonify({"status": "ok", "service": "FeatureGuard AI"})
 
+
 @app.post("/api/events")
 def ingest_event():
     data = request.get_json(silent=True) or {}
-    required = ("event_name",)
-    if any(not data.get(k) for k in required):
+    if not data.get("event_name"):
         return jsonify({"error": "event_name is required"}), 400
+    try:
+        value = float(data.get("value", 1) or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "value must be numeric"}), 400
+    metadata = data.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return jsonify({"error": "metadata must be an object"}), 400
     event_id = save_event(
         event_name=str(data["event_name"])[:100],
         feature_name=str(data.get("feature_name", "unknown"))[:100],
         success=bool(data.get("success", True)),
-        value=float(data.get("value", 1) or 0),
-        metadata=data.get("metadata", {})
+        value=value,
+        metadata=metadata
     )
     return jsonify({"accepted": True, "event_id": event_id}), 201
+
 
 @app.get("/api/events")
 def get_events():
     return jsonify(recent_events())
 
+
 @app.get("/api/summary")
 def summary():
     return jsonify(event_summary())
 
+
 @app.post("/api/ai/analyse")
 def ai_analyse():
-    result = analyse_events(event_summary())
-    return jsonify(result)
+    return jsonify(analyse_events(event_summary()))
+
+
+@app.get("/api/flagsmith/flags")
+def flagsmith_flags():
+    try:
+        return jsonify({"configured": True, "flags": list_feature_states()})
+    except FlagsmithError as exc:
+        return jsonify({"configured": False, "error": str(exc)}), 503
+
+
+@app.post("/api/rollback/request")
+def request_rollback():
+    data = request.get_json(silent=True) or {}
+    feature_name = str(data.get("feature_name", "")).strip()
+    reason = str(data.get("reason", "FeatureGuard detected a possible incident."))[:300]
+    if feature_name not in _allowed_rollback_flags():
+        return jsonify({"error": "This flag is not on the rollback allowlist."}), 403
+    try:
+        flags = list_feature_states()
+    except FlagsmithError as exc:
+        return jsonify({"error": str(exc)}), 503
+    target = next((f for f in flags if f["name"] == feature_name), None)
+    if target is None:
+        return jsonify({"error": "Flag not found in the configured Flagsmith environment."}), 404
+    if not target["enabled"]:
+        return jsonify({"error": "This flag is already OFF; no rollback is needed."}), 409
+
+    approval_id = secrets.token_urlsafe(24)
+    _pending_rollbacks[approval_id] = {
+        "feature_name": feature_name,
+        "reason": reason,
+        "expires_at": time.time() + APPROVAL_TTL_SECONDS,
+    }
+    return jsonify({
+        "approval_id": approval_id,
+        "feature_name": feature_name,
+        "current_state": "ON",
+        "proposed_state": "OFF",
+        "reason": reason,
+        "expires_in_seconds": APPROVAL_TTL_SECONDS,
+        "message": "Rollback prepared. Nothing has changed yet; explicit approval is required."
+    })
+
+
+@app.post("/api/rollback/approve")
+def approve_rollback():
+    data = request.get_json(silent=True) or {}
+    approval_id = str(data.get("approval_id", ""))
+    pending = _pending_rollbacks.pop(approval_id, None)
+    if not pending or pending["expires_at"] < time.time():
+        return jsonify({"error": "Approval is missing, expired, or already used. Request a new rollback."}), 400
+
+    feature_name = pending["feature_name"]
+    if feature_name not in _allowed_rollback_flags():
+        return jsonify({"error": "This flag is no longer on the rollback allowlist."}), 403
+    try:
+        updated = set_feature_enabled(feature_name, False)
+    except FlagsmithError as exc:
+        return jsonify({"error": str(exc), "changed": False}), 502
+
+    return jsonify({
+        "success": True,
+        "changed": True,
+        "feature": updated,
+        "reason": pending["reason"],
+        "message": f"Rollback complete. {feature_name} is OFF and Flagsmith confirmed the new state."
+    })
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=False)
